@@ -888,6 +888,20 @@ class ServerArgs:
         "How conservative the schedule policy is. A larger value means more conservative scheduling. Use a larger value if you see requests being retracted frequently.",
         NS("schedule"),
     ] = 1.0
+    enable_peak_kv_reservation: A[
+        bool,
+        "[W3 study] Delay admission of a new request when the running requests, "
+        "the requests admitted in this round and the new request would exceed the "
+        "KV pool at their peak, using each request's output budget (max_new_tokens). "
+        "Works with the radix cache enabled. Off by default.",
+        NS("schedule"),
+    ] = False
+    peak_kv_reserve_ratio: A[
+        float,
+        "[W3 study] Fraction (0, 1] of each request's remaining output budget that "
+        "--enable-peak-kv-reservation reserves. 1.0 reserves the whole budget.",
+        NS("schedule"),
+    ] = 1.0
     page_size: A[
         Optional[int],
         Arg(help="The number of tokens in a page.", resolvable=True),
@@ -9280,6 +9294,9 @@ class ServerArgs:
         assert (
             self.schedule_conservativeness >= 0
         ), "schedule_conservativeness must be non-negative"
+        assert (
+            0 < self.peak_kv_reserve_ratio <= 1.0
+        ), "peak_kv_reserve_ratio must be in (0, 1]"
 
         if self.model_impl == "mindspore":
             assert is_npu(), "MindSpore model impl is only supported on Ascend npu."
